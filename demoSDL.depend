@@ -1,4 +1,9 @@
 # depslib dependency file v1.0
-1740751576 source:d:\demosdl\main.cpp
+1742983178 source:d:\demosdl\main.cpp
 	<iostream>
+	<SDL.h>
+	<vector>
+	<cstdlib>
+	<ctime>
+	<algorithm>
 
