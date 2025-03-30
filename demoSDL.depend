@@ -1,9 +1,11 @@
 # depslib dependency file v1.0
-1742983178 source:d:\demosdl\main.cpp
+1743350631 source:d:\demosdl\main.cpp
 	<iostream>
 	<SDL.h>
+	<SDL_image.h>
 	<vector>
 	<cstdlib>
 	<ctime>
 	<algorithm>
+	<cmath>
 
