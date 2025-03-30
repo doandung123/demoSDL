@@ -418,27 +418,25 @@ public:
 
     void generateWalls() {
         walls.clear();
-        const int textWidth = 12;  // Độ rộng chữ
-        const int textHeight = 6;  // Độ cao chữ
-        const int startX = (MAP_WIDTH - textWidth) / 2;  // Căn giữa theo chiều ngang
-        const int startY = 3;  // Điều chỉnh vị trí theo chiều dọc
+        const int mapWidth = MAP_WIDTH;
+    const int mapHeight = MAP_HEIGHT;
 
-        const int map[textHeight][textWidth] = {
-            {1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1},
-            {1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1},
-            {1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1},
-            {1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1},
-            {1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1},
-            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-        };
+    // Tỷ lệ tạo tường (điều chỉnh để tăng hoặc giảm mật độ tường)
+    const float wallDensity = 0.3f; // 30% ô có tường
 
-        for (int i = 0; i < textHeight; i++) {
-            for (int j = 0; j < textWidth; j++) {
-                if (map[i][j] == 1) {
-                    walls.emplace_back(renderer, (startX + j) * TILE_SIZE, (startY + i) * TILE_SIZE);
+    for (int i = 0; i < mapHeight; i++) {
+        for (int j = 0; j < mapWidth; j++) {
+            // Loại trừ biên của bản đồ
+            if (i == 0 || i == mapHeight - 1 || j == 0 || j == mapWidth - 1) {
+                walls.emplace_back(renderer, j * TILE_SIZE, i * TILE_SIZE);
+            } else {
+                // Tạo tường ngẫu nhiên
+                if ((float)rand() / RAND_MAX < wallDensity) {
+                    walls.emplace_back(renderer, j * TILE_SIZE, i * TILE_SIZE);
                 }
             }
         }
+    }
     }
 
     void spawnEnemies() {
