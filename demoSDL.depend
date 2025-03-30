@@ -1,7 +1,13 @@
 # depslib dependency file v1.0
-1743372505 source:d:\demosdl\main.cpp
+1743373110 source:d:\demosdl\main.cpp
+	<iostream>
+	<SDL.h>
 	<SDL_image.h>
-	"game.h"
+	<vector>
+	<cstdlib>
+	<ctime>
+	<algorithm>
+	<cmath>
 
 1743372505 d:\demosdl\game.h
 	<SDL.h>
