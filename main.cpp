@@ -68,12 +68,13 @@ public:
     SDL_Rect rect;
     SDL_Texture* texture;
     bool active;
+    bool indestructible; // Thêm biến để kiểm tra tường có phá hủy được không
 
-    Wall(SDL_Renderer* renderer, int startX, int startY) : x(startX), y(startY), active(true) {
+    Wall(SDL_Renderer* renderer, int startX, int startY, bool indestructible = false) : x(startX), y(startY), active(true), indestructible(indestructible) {
         rect = {x, y, TILE_SIZE, TILE_SIZE};
-        SDL_Surface* surface = IMG_Load("wall.jpg");
+        SDL_Surface* surface = IMG_Load(indestructible ? "stone.jpg" : "wall.jpg");
         if (!surface) {
-            cerr << "Không thể tải ảnh wall.jpg! SDL_image Error: " << IMG_GetError() << endl;
+            cerr << "Không thể tải ảnh! SDL_image Error: " << IMG_GetError() << endl;
         }
         texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_FreeSurface(surface);
@@ -120,36 +121,38 @@ public:
         int newY = y + dy;
         SDL_Rect newRect = {newX, newY, TILE_SIZE, TILE_SIZE};
 
+        bool canMove = true;
         for (const auto& wall : walls) {
             if (wall.active && SDL_HasIntersection(&newRect, &wall.rect)) {
-                return;
+                canMove = false;
+                break;
             }
         }
 
-        if (newX >= TILE_SIZE && newX <= (MAP_WIDTH - 2) * TILE_SIZE &&
+        if (canMove && newX >= TILE_SIZE && newX <= (MAP_WIDTH - 2) * TILE_SIZE &&
             newY >= TILE_SIZE && newY <= (MAP_HEIGHT - 2) * TILE_SIZE) {
             x = newX;
             y = newY;
             rect.x = x;
             rect.y = y;
+        }
 
-            if (dx == 5) {
-                angle = 90;
-                dirX = 1;
-                dirY = 0;
-            } else if (dx == -5) {
-                angle = -90;
-                dirX = -1;
-                dirY = 0;
-            } else if (dy == 5) {
-                angle = 180;
-                dirX = 0;
-                dirY = 1;
-            } else if (dy == -5) {
-                angle = 0;
-                dirX = 0;
-                dirY = -1;
-            }
+        if (dx == 5) {
+            angle = 90;
+            dirX = 1;
+            dirY = 0;
+        } else if (dx == -5) {
+            angle = -90;
+            dirX = -1;
+            dirY = 0;
+        } else if (dy == 5) {
+            angle = 180;
+            dirX = 0;
+            dirY = 1;
+        } else if (dy == -5) {
+            angle = 0;
+            dirX = 0;
+            dirY = -1;
         }
     }
 
@@ -369,7 +372,12 @@ public:
     PlayerTank player;
     int enemyNumber = 3;
     vector<EnemyTank> enemies;
-    int gameState;
+    int gameState; // 0: menu, 1: đang chơi, 2: thắng, 3: thua
+    int endTimer; // Bộ đếm thời gian kết thúc
+    SDL_Texture* winTexture;
+    SDL_Texture* loseTexture;
+    SDL_Rect winRect;
+    SDL_Rect loseRect;
     SDL_Texture* menuTexture;
     SDL_Rect menuRect;
 
@@ -403,7 +411,29 @@ public:
         generateWalls();
         spawnEnemies();
         loadMenuTexture();
+        loadTextures();
         menuRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+    }
+
+    void loadTextures() {
+        SDL_Surface* winSurface = IMG_Load("youwin.png");
+        if (!winSurface) {
+            cerr << "Lỗi tải ảnh youwin.png: " << IMG_GetError() << endl;
+            return;
+        }
+        winTexture = SDL_CreateTextureFromSurface(renderer, winSurface);
+        SDL_FreeSurface(winSurface);
+
+        SDL_Surface* loseSurface = IMG_Load("youlose.png");
+        if (!loseSurface) {
+            cerr << "Lỗi tải ảnh youlose.png: " << IMG_GetError() << endl;
+            return;
+        }
+        loseTexture = SDL_CreateTextureFromSurface(renderer, loseSurface);
+        SDL_FreeSurface(loseSurface);
+
+        winRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+        loseRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
     }
 
     void loadMenuTexture() {
@@ -419,24 +449,26 @@ public:
     void generateWalls() {
         walls.clear();
         const int mapWidth = MAP_WIDTH;
-    const int mapHeight = MAP_HEIGHT;
+        const int mapHeight = MAP_HEIGHT;
 
-    // Tỷ lệ tạo tường (điều chỉnh để tăng hoặc giảm mật độ tường)
-    const float wallDensity = 0.3f; // 30% ô có tường
+        // Tỷ lệ tạo tường (điều chỉnh để tăng hoặc giảm mật độ tường)
+        const float wallDensity = 0.2f; // 20% ô có tường
+        const float stoneDensity = 0.05f; // Tỷ lệ đá
 
-    for (int i = 0; i < mapHeight; i++) {
-        for (int j = 0; j < mapWidth; j++) {
-            // Loại trừ biên của bản đồ
-            if (i == 0 || i == mapHeight - 1 || j == 0 || j == mapWidth - 1) {
-                walls.emplace_back(renderer, j * TILE_SIZE, i * TILE_SIZE);
-            } else {
-                // Tạo tường ngẫu nhiên
-                if ((float)rand() / RAND_MAX < wallDensity) {
+        for (int i = 0; i < mapHeight; i++) {
+            for (int j = 0; j < mapWidth; j++) {
+                // Loại trừ biên của bản đồ
+                if (i == 0 || i == mapHeight - 1 || j == 0 || j == mapWidth - 1) {
                     walls.emplace_back(renderer, j * TILE_SIZE, i * TILE_SIZE);
+                } else {
+                    if ((float)rand() / RAND_MAX < stoneDensity) {
+                        walls.emplace_back(renderer, j * TILE_SIZE, i * TILE_SIZE, true); // Tạo đá
+                    } else if ((float)rand() / RAND_MAX < wallDensity) {
+                        walls.emplace_back(renderer, j * TILE_SIZE, i * TILE_SIZE); // Tạo tường thường
+                    }
                 }
             }
         }
-    }
     }
 
     void spawnEnemies() {
@@ -506,7 +538,9 @@ public:
         for (auto& bullet : player.bullets) {
             for (auto& wall : walls) {
                 if (wall.active && SDL_HasIntersection(&bullet.rect, &wall.rect)) {
-                    wall.active = false;
+                    if (!wall.indestructible) { // Kiểm tra xem tường có phá hủy được không
+                        wall.active = false;
+                    }
                     bullet.active = false;
                     break;
                 }
@@ -526,7 +560,9 @@ public:
             for (auto& bullet : enemy.bullets) {
                 for (auto& wall : walls) {
                     if (wall.active && SDL_HasIntersection(&bullet.rect, &wall.rect)) {
-                        wall.active = false;
+                        if (!wall.indestructible){
+                            wall.active = false;
+                        }
                         bullet.active = false;
                         break;
                     }
@@ -537,14 +573,17 @@ public:
         enemies.erase(std::remove_if(enemies.begin(), enemies.end(),
             [](EnemyTank& e) { return !e.active; }), enemies.end());
 
+
         if (enemies.empty()) {
-            running = false;
+            gameState = 2; // Thắng
+            endTimer = 120; // Khởi tạo bộ đếm thời gian
         }
 
         for (auto& enemy : enemies) {
             for (auto& bullet : enemy.bullets) {
                 if (SDL_HasIntersection(&bullet.rect, &player.rect)) {
-                    running = false;
+                    gameState = 3; // Thua
+                    endTimer = 120; // Khởi tạo bộ đếm thời gian
                     return;
                 }
             }
@@ -573,8 +612,21 @@ public:
             for (auto& enemy : enemies) {
                 enemy.render(renderer);
             }
+        } else if (gameState == 2 && endTimer > 0) {
+            SDL_RenderCopy(renderer, winTexture, NULL, &winRect);
+        } else if (gameState == 3 && endTimer > 0) {
+            SDL_RenderCopy(renderer, loseTexture, NULL, &loseRect);
         }
 
+        if (gameState == 2 || gameState == 3) {
+            if (endTimer > 0) {
+                endTimer--;
+            } else {
+                gameState = 0; // Quay lại menu
+                generateWalls(); // Tạo lại tường
+                spawnEnemies(); // Tạo lại xe tăng địch
+            }
+        }
         SDL_RenderPresent(renderer);
     }
 
@@ -586,9 +638,10 @@ public:
             if (event.type == SDL_QUIT) {
                 running = false;
             } else if (event.type == SDL_MOUSEBUTTONDOWN) {
-                if (gameState == 0) { // Đang ở menu
-                    int mouseX, mouseY;
-                    SDL_GetMouseState(&mouseX, &mouseY);
+                int mouseX, mouseY;
+                SDL_GetMouseState(&mouseX, &mouseY);
+                if (gameState == 0) {
+                    // Đang ở menu chính
                     SDL_Rect startRect = {
                         SCREEN_WIDTH / 2 - buttonWidth / 2,
                         SCREEN_HEIGHT * 3 / 5,
@@ -601,37 +654,43 @@ public:
                         buttonWidth,
                         buttonHeight
                     };
-                    if (mouseX >= quitRect.x && mouseX <= quitRect.x + quitRect.w &&
-                        mouseY >= quitRect.y && mouseY <= quitRect.y + quitRect.h) {
-                        running = false; // Thoát game
-                    }
-                    else if (mouseX >= startRect.x && mouseX <= startRect.x + startRect.w &&
-                             mouseY >= startRect.y && mouseY <= startRect.y + startRect.h) {
+
+                    if (mouseX >= startRect.x && mouseX <= startRect.x + startRect.w &&
+                        mouseY >= startRect.y && mouseY <= startRect.y + startRect.h) {
+                        // Nhấp vào nút "Start"
                         gameState = 1; // Bắt đầu chơi
+                        generateWalls(); // Tạo lại tường
+                        spawnEnemies(); // Tạo lại xe tăng địch
+                    } else if (mouseX >= quitRect.x && mouseX <= quitRect.x + quitRect.w &&
+                               mouseY >= quitRect.y && mouseY <= quitRect.y + quitRect.h) {
+                        // Nhấp vào nút "Quit"
+                        running = false;
                     }
-                 }
-              } else if (event.type == SDL_KEYDOWN) {
-                  if (gameState == 1) { // Đang chơi game
-                      switch (event.key.keysym.sym) {
-                          case SDLK_UP:
-                              player.move(0, -5, walls);
-                              break;
-                          case SDLK_DOWN:
-                              player.move(0, 5, walls);
-                              break;
-                          case SDLK_LEFT:
-                              player.move(-5, 0, walls);
-                              break;
-                          case SDLK_RIGHT:
-                              player.move(5, 0, walls);
-                              break;
-                          case SDLK_SPACE:
-                              player.shoot(renderer);
-                              break;
-                      }
-                  }
-              }
-         }
+                }
+            } else if (event.type == SDL_KEYDOWN) {
+                // Người chơi nhấn phím
+                if (gameState == 1) {
+                    // Đang chơi
+                    switch (event.key.keysym.sym) {
+                        case SDLK_UP:
+                            player.move(0, -5, walls);
+                            break;
+                        case SDLK_DOWN:
+                            player.move(0, 5, walls);
+                            break;
+                        case SDLK_LEFT:
+                            player.move(-5, 0, walls);
+                            break;
+                        case SDLK_RIGHT:
+                            player.move(5, 0, walls);
+                            break;
+                        case SDLK_SPACE:
+                            player.shoot(renderer);
+                            break;
+                    }
+                }
+            }
+        }
     }
 
     void drawMenu() {

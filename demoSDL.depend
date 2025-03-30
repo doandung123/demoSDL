@@ -1,11 +1,55 @@
 # depslib dependency file v1.0
-1743351626 source:d:\demosdl\main.cpp
-	<iostream>
+1743372505 source:d:\demosdl\main.cpp
+	<SDL_image.h>
+	"game.h"
+
+1743372505 d:\demosdl\game.h
 	<SDL.h>
 	<SDL_image.h>
 	<vector>
+	"tank.h"
+	"wall.h"
+
+1743372505 d:\demosdl\tank.h
+	<SDL.h>
+	<vector>
+	"bullet.h"
+	"wall.h"
+
+1743372505 d:\demosdl\bullet.h
+	<SDL.h>
+
+1743372505 d:\demosdl\wall.h
+	<SDL.h>
+
+1743372505 source:d:\demosdl\tank.cpp
+	"tank.h"
+	<SDL_image.h>
+	<iostream>
+	<algorithm>
 	<cstdlib>
+
+1743372505 source:d:\demosdl\utility.cpp
+	"utility.h"
+
+1743372505 d:\demosdl\utility.h
+	<SDL.h>
+
+1743372505 source:d:\demosdl\wall.cpp
+	"wall.h"
+	<SDL_image.h>
+	<iostream>
+
+1743372586 source:d:\demosdl\bullet.cpp
+	"bullet.h"
+	"game.h"
+	<SDL_image.h>
+	<iostream>
+
+1743372873 source:d:\demosdl\game.cpp
+	"game.h"
+	"utility.h"
+	<iostream>
 	<ctime>
 	<algorithm>
-	<cmath>
 
